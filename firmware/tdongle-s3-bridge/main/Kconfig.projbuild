@@ -1,0 +1,15 @@
+menu "T-Dongle-S3 status panel"
+
+    config APP_BRIDGE_MODE
+        bool "Run as USB-NCM Wi-Fi bridge"
+        default y
+        help
+            Bridges layer-2 frames between the Wi-Fi station interface and a USB
+            NCM network interface, so a USB host (the Raspberry Pi) gets its own
+            DHCP lease from the real router. Requires USB OTG, which takes over
+            the USB pins, so the USB serial console is unavailable in this mode.
+
+            Disable to build a display-only image with the console on
+            USB-Serial/JTAG (used to verify the panel driver over serial).
+
+endmenu
