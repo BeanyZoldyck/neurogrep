@@ -19,3 +19,11 @@ build/
 
 # capture output (see screenshots/ for the curated ones)
 screen.png
+
+# ESP-IDF
+sdkconfig
+sdkconfig.old
+build*/
+managed_components/
+dependencies.lock
+*.pcap
