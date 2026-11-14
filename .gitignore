@@ -1,1 +1,21 @@
 references
+
+# Local Wi-Fi credentials - never commit
+secrets.h
+*.secret
+
+# Flash images and serial dumps
+*.bin
+*.elf
+*.map
+dump*.txt
+splash*.txt
+live*.txt
+*.log
+
+# Build artefacts
+build/
+.pio/
+
+# capture output (see screenshots/ for the curated ones)
+screen.png
