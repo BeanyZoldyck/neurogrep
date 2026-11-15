@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "VeriCam",
+    "slug": "vericam",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vericam.mobile",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "VeriCam links to the VeriCam-HSM card reader over Bluetooth.",
+        "NSCameraUsageDescription": "VeriCam hashes live camera frames into the hardware-bound chain."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.vericam.mobile",
+      "permissions": [
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": [
+            "central"
+          ],
+          "bluetoothAlwaysPermission": "VeriCam links to the VeriCam-HSM card reader over Bluetooth.",
+          "neverForLocation": true
+        }
+      ],
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "VeriCam hashes live camera frames into the hardware-bound chain.",
+          "enableMicrophonePermission": false
+        }
+      ],
+      "react-native-quick-crypto",
+      "expo-dev-client"
+    ],
+    "backgroundColor": "#0d1014",
+    "extra": {
+      "apiBase": "https://vericam.example.com"
+    }
+  }
+}
