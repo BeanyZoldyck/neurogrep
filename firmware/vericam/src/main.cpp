@@ -4,6 +4,7 @@
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
+#include "network.h"
 
 // AI-Thinker ESP32-CAM: SD slot must be empty; camera is not initialized.
 MFRC522 rfid(13, 2);
@@ -22,6 +23,7 @@ void publish(uint8_t status) {
   uint32_t elapsed = active ? millis() - started : 0;
   memcpy(state + 8, &elapsed, 4);
   stateChar->setValue(state, sizeof(state));
+  if (status == 3 || status == 4 || status >= 0x80) networkEvent(state);
 }
 void releaseCard() {
   rfid.PICC_HaltA(); rfid.PCD_StopCrypto1();
@@ -62,6 +64,7 @@ void setup() {
   BLEDevice::getAdvertising()->addServiceUUID(service->getUUID());
   BLEDevice::getAdvertising()->setScanResponse(true);
   BLEDevice::startAdvertising();
+  networkStart();
   Serial.printf("VeriCam ready; RC522 version: 0x%02x\n", rfid.PCD_ReadRegister(MFRC522::VersionReg));
 }
 void loop() {
