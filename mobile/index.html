@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VeriCam · Card commitment</title>
+<style>
+body{font:16px system-ui;background:#10151f;color:#eaf1ff;max-width:850px;margin:auto;padding:20px}button,input{font:inherit;margin:6px 0;padding:12px;max-width:100%;box-sizing:border-box}button{background:#8ce4bb;border:0;border-radius:8px;cursor:pointer}button:disabled{opacity:.4}video,canvas{width:100%;background:#000;border-radius:10px}section{margin:20px 0;padding:16px;background:#1b2433;border-radius:12px}.arena{display:grid;grid-template-columns:1fr 1fr;gap:12px}#status{white-space:pre-wrap;overflow-wrap:anywhere}small{color:#bac8dc}a{color:#8ce4bb}
+</style>
+<h1>VeriCam</h1><p>Phone camera → SHA-256 frame chain → physical S50 card</p>
+<button id="connect">1. Connect ESP32</button> <button id="camera">2. Start camera</button>
+<section><video id="live" autoplay playsinline muted></video><button id="capture" disabled>3. Capture & commit (tap card)</button><p><small>Overwrites card blocks 4 and 5. Keep the card on the reader until the result appears. Target: 25 frames within 1,100 ms.</small></p></section>
+<p id="status" role="status" aria-live="polite">Connect to VeriCam-HSM in Chrome Android or a Web Bluetooth-enabled iOS browser.</p>
+<section><h2>Evidence A</h2><canvas id="replay" width="160" height="120"></canvas><button id="play" disabled>Replay preserved frames</button> <a id="download" hidden>Download evidence</a><p><label>Load evidence (.json) <input id="evidence" type="file" accept=".json,application/json"></label></p><button id="verify" disabled>Verify evidence against card (tap)</button></section>
+<section><h2>Comparison B</h2><video id="twin" controls playsinline></video><input id="twinFile" type="file" accept="video/*"><button id="compare" disabled>Compare 25 decoded frames with card</button><p><small>A mismatch means different bytes, not proof of AI generation. Encoded video, including a re-encoded original, generally differs from preserved capture pixels.</small></p><label>Optional same-origin generation hook <input id="hook" placeholder="/api/twin"></label><button id="generate" disabled>Generate comparison video</button></section>
+<p><small>This is a byte-consistency demonstration, not sensor attestation. BLE range and RFID proximity are not measured. Timing is enforced by the ESP32, but cannot establish scene authenticity.</small></p>
+<script type="module" src="app.mjs"></script></html>
