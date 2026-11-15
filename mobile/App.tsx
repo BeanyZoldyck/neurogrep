@@ -10,11 +10,12 @@ import {
   Camera, useCameraDevice, useCameraFormat, useCameraPermission, useFrameProcessor,
 } from 'react-native-vision-camera';
 import { Worklets, useSharedValue } from 'react-native-worklets-core';
-import { FRAME_MS, N_FRAMES, chain, eq, hex, seedHash, step } from './src/chain';
+import { N_FRAMES, chain, eq, hex, seedHash, step } from './src/chain';
 import { BleHsm, Hsm, HsmEvent, MODE, MockHsm, onEvent, waitEvent } from './src/hsm';
 import { Clip, keepThumb, loadClip, saveClip, thumbBase64 } from './src/store';
 import * as api from './src/api';
 
+const OUT_W = 160, OUT_H = 120;
 const C = { bg: '#0d1014', fg: '#e6e9ee', mut: '#8b94a3', card: '#161b22', line: '#2a313c', acc: '#4ea1ff', ok: '#2fbf71', bad: '#ff4d5e', warn: '#f5b942' };
 type Tab = 'link' | 'capture' | 'arena' | 'verify' | 'stats';
 type Banner = { cls: 'ok' | 'bad' | 'wait'; text: string } | null;
@@ -71,7 +72,7 @@ export default function App() {
   const [anchor, setAnchor] = useState<api.Anchor>(null);
   const [apiBase, setApiBaseS] = useState(api.DEFAULT_API);
   const [stats, setStats] = useState('');
-  const [pf, setPf] = useState<'rgb' | 'yuv'>('rgb');
+  const [pf, setPf] = useState<'rgb' | 'yuv'>(Platform.OS === 'android' ? 'yuv' : 'rgb');
 
   const log = useCallback((m: string) => {
     setLogs((l) => [`[${String(Date.now() - T0).padStart(7)}] ${m}`, ...l].slice(0, 200));
@@ -82,7 +83,10 @@ export default function App() {
   const setClip = (k: 'A' | 'B', c: Clip) => { setClips((p) => ({ ...p, [k]: c })); saveClip(k, c); };
 
   // ---------- link ----------
+  const linking = useRef(false);
   async function link(h: Hsm) {
+    if (linking.current) return; // ignore repeat taps while a scan is running
+    linking.current = true; setBusy(true);
     try {
       if (h instanceof BleHsm && Platform.OS === 'android') {
         const r = await PermissionsAndroid.requestMultiple([
@@ -91,15 +95,18 @@ export default function App() {
         ]);
         log('BLE perms ' + JSON.stringify(r));
       }
-      const n = await h.connect(); hsm?.disconnect?.(); setHsm(h); setLinkName(n); log('linked ' + n);
+      // ESP32 accepts one central and stops advertising while linked: drop the old link before scanning.
+      if (hsm) { hsm.disconnect?.(); setHsm(null); setLinkName(''); await new Promise((r) => setTimeout(r, 1200)); }
+      const n = await h.connect(); setHsm(h); setLinkName(n); log('linked ' + n);
     } catch (e: any) { log('link error: ' + e.message); Alert.alert('Link failed', e.message); }
+    finally { linking.current = false; setBusy(false); }
   }
   const onBleDisconnect = () => { setHsm(null); setLinkName(''); log('BLE disconnected'); };
 
   // ---------- camera ----------
   const camera = useRef<Camera>(null);
   const device = useCameraDevice('back');
-  const format = useCameraFormat(device, [{ videoResolution: { width: 480, height: 360 } }, { fps: 30 }]);
+  const format = useCameraFormat(device, [{ fps: 30 }, { videoResolution: { width: 640, height: 480 } }]);
   const { hasPermission, requestPermission } = useCameraPermission();
   useEffect(() => { if (!hasPermission) requestPermission(); }, [hasPermission, requestPermission]);
 
@@ -107,19 +114,40 @@ export default function App() {
   const fIdx = useSharedValue(0);
   const fT0 = useSharedValue(0);
   const sink = useRef<((px: Uint8Array, i: number, w: number, h: number, f: string) => void) | null>(null);
-  const onFrameJS = useMemo(() => Worklets.createRunOnJS((buf: ArrayBuffer, i: number, w: number, h: number, f: string) => {
-    sink.current?.(new Uint8Array(buf), i, w, h, f);
+  // worklets-core can't share ArrayBuffers across runtimes; strings cross cheaply (1 char = 1 byte).
+  const onFrameJS = useMemo(() => Worklets.createRunOnJS((str: string, i: number, w: number, h: number, f: string) => {
+    const px = new Uint8Array(str.length);
+    for (let k = 0; k < str.length; k++) px[k] = str.charCodeAt(k);
+    sink.current?.(px, i, w, h, f);
   }), []);
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet';
     if (!capturing.value) return;
     const i = fIdx.value;
     if (i >= N_FRAMES) { capturing.value = false; return; }
-    if (Date.now() < fT0.value + i * FRAME_MS) return; // pace 25 frames over 850 ms
+    // consecutive frames at the camera's native 30 fps (25 frames ≈ 833 ms)
     fIdx.value = i + 1;
-    const copy = frame.toArrayBuffer().slice(0); // own the bytes; VC reuses its buffer
-    onFrameJS(copy, i, frame.width, frame.height, frame.pixelFormat);
+    // 160×120 luma grid sampled from the live frame (Y plane for yuv, G channel for rgb)
+    const src = new Uint8Array(frame.toArrayBuffer());
+    const W = frame.width, H = frame.height, stride = frame.bytesPerRow;
+    const bpp = frame.pixelFormat === 'rgb' ? 4 : 1, off = bpp === 4 ? 1 : 0;
+    const row: number[] = new Array(OUT_W);
+    let str = '';
+    for (let y = 0; y < OUT_H; y++) {
+      const base = Math.floor((y * H) / OUT_H) * stride;
+      for (let x = 0; x < OUT_W; x++) row[x] = src[base + Math.floor((x * W) / OUT_W) * bpp + off];
+      str += String.fromCharCode.apply(null, row);
+    }
+    onFrameJS(str, i, OUT_W, OUT_H, 'y8');
   }, [onFrameJS]);
+
+  const fps = 30;
+  const camActive = tab === 'capture';
+  const camEl = useMemo(() => device ? (
+    <Camera ref={camera} style={s.cam} device={device} format={format} fps={fps} isActive={camActive}
+      video={Platform.OS === 'ios'} pixelFormat={pf} frameProcessor={frameProcessor}
+      videoStabilizationMode="off" enableBufferCompression />
+  ) : null, [device, format, fps, camActive, pf, frameProcessor]);
 
   // ---------- capture ----------
   async function capture() {
@@ -141,13 +169,13 @@ export default function App() {
         sink.current = (px, i, w, hh, f) => {
           if (i !== frames.length) return; // ordering guard
           frames.push(px); h = step(h, i, px); meta = { w, h: hh, f };
-          setProgress((i + 1) / N_FRAMES);
+          if ((i + 1) % 5 === 0 || i + 1 === N_FRAMES) setProgress((i + 1) / N_FRAMES);
           if (frames.length === N_FRAMES) { clearTimeout(to); res(); }
         };
       });
       fIdx.value = 0; fT0.value = t0; capturing.value = true;
       try { await done; } finally { capturing.value = false; sink.current = null; }
-      tl.push(`T=${Date.now() - t0} ${N_FRAMES} frames chained (${meta.w}×${meta.h} ${meta.f})`);
+      { const dt = Date.now() - t0; tl.push(`T=${dt} ${N_FRAMES} frames chained (${meta.w}×${meta.h} ${meta.f}, ~${(N_FRAMES * 1000 / dt).toFixed(1)} fps)`); }
       const okP = waitEvent((e) => e.type === 'ok' || e.type === 'fail', 3000);
       await hsm.sendDigest(h);
       tl.push(`T=${Date.now() - t0} digest sent ${hex(h).slice(0, 16)}…`);
@@ -250,7 +278,7 @@ export default function App() {
     <SafeAreaView style={s.root}>
       <StatusBar style="light" />
       <View style={s.header}>
-        <Text style={s.h1}>VeriCam</Text>
+        <Text style={s.h1}>Provenance</Text>
         <Text style={[s.pill, hsm && { backgroundColor: C.ok, color: '#000' }]}>{hsm ? 'linked: ' + linkName : 'disconnected'}</Text>
       </View>
       <View style={s.tabs}>
@@ -265,8 +293,7 @@ export default function App() {
       {tab === 'capture' && (
         <View style={s.sec}>
           {device && hasPermission ? (
-            <Camera ref={camera} style={s.cam} device={device} format={format} isActive={tab === 'capture'}
-              video pixelFormat={pf} frameProcessor={frameProcessor} />
+            camEl
           ) : <Text style={s.mut}>{hasPermission ? 'no camera device' : 'camera permission required'}</Text>}
           <View style={s.row}>
             <Btn title="Arm capture → tap card" disabled={!hsm || !device || busy} onPress={capture} />
