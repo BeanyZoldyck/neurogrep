@@ -1,0 +1,29 @@
+--- a/node_modules/react-native-vision-camera/android/src/main/cpp/frameprocessors/FrameHostObject.cpp
++++ b/node_modules/react-native-vision-camera/android/src/main/cpp/frameprocessors/FrameHostObject.cpp
+@@ -148,22 +148,10 @@
+                           bufferDescription.height, bufferDescription.stride);
+       size_t size = bufferDescription.height * bufferDescription.stride;
+ 
+-      static constexpr auto ARRAYBUFFER_CACHE_PROP_NAME = "__frameArrayBufferCache";
+-      if (!runtime.global().hasProperty(runtime, ARRAYBUFFER_CACHE_PROP_NAME)) {
+-        auto mutableBuffer = std::make_shared<vision::MutableRawBuffer>(size);
+-        jsi::ArrayBuffer arrayBuffer(runtime, mutableBuffer);
+-        runtime.global().setProperty(runtime, ARRAYBUFFER_CACHE_PROP_NAME, arrayBuffer);
+-      }
+-
+-      // Get from global JS cache
+-      auto arrayBufferCache = runtime.global().getPropertyAsObject(runtime, ARRAYBUFFER_CACHE_PROP_NAME);
+-      auto arrayBuffer = arrayBufferCache.getArrayBuffer(runtime);
+-
+-      if (arrayBuffer.size(runtime) != size) {
+-        auto mutableBuffer = std::make_shared<vision::MutableRawBuffer>(size);
+-        arrayBuffer = jsi::ArrayBuffer(runtime, mutableBuffer);
+-        runtime.global().setProperty(runtime, ARRAYBUFFER_CACHE_PROP_NAME, arrayBuffer);
+-      }
++      // Patched: no global cache. worklets-core proxies the runtime global and rejects
++      // ArrayBuffers as shared values ("Array buffers are not supported as shared values").
++      auto mutableBuffer = std::make_shared<vision::MutableRawBuffer>(size);
++      jsi::ArrayBuffer arrayBuffer(runtime, mutableBuffer);
+ 
+       // Get CPU access to the HardwareBuffer (&buffer is a virtual temporary address)
+       void* buffer;

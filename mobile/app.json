@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "VeriCam",
+    "name": "Provenance",
     "slug": "vericam",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -53,11 +53,19 @@
         }
       ],
       "react-native-quick-crypto",
-      "expo-dev-client"
+      "expo-dev-client",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ]
     ],
     "backgroundColor": "#0d1014",
     "extra": {
-      "apiBase": "https://vericam.example.com"
+      "apiBase": "https://screw-dame-sandra-exploration.trycloudflare.com"
     }
   }
 }
