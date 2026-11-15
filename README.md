@@ -4,6 +4,10 @@ Hardware utilities and firmware that happen to live in one repo.
 
 ## Contents
 
+- [`firmware/vericam`](firmware/vericam) — ESP32-CAM BLE/RC522 firmware and
+  [`mobile`](mobile) HTTPS phone-camera app implementing the card commitment
+  flow in `NEWPLAN.md`. See its README for wiring, flashing and verification.
+
 - [`firmware/tdongle-s3`](firmware/tdongle-s3) - Arduino firmware for the LilyGo
   T-Dongle-S3: joins Wi-Fi and shows link state, IP, RSSI, channel and uptime on
   its 160x80 LCD. The `PI` indicator lights only once a USB host has enumerated

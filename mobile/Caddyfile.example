@@ -1,0 +1,11 @@
+# Replace the hostname; point DNS at your Vultr server. Caddy obtains HTTPS.
+vericam.example.com {
+    root * /srv/vericam
+    header Permissions-Policy "camera=(self), microphone=(), bluetooth=(self)"
+    header X-Content-Type-Options nosniff
+    file_server
+    # Optional: implement POST /api/twin on your own generation backend.
+    # handle /api/* {
+    #     reverse_proxy 127.0.0.1:8080
+    # }
+}
