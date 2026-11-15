@@ -1,0 +1,7 @@
+# Vultr box: point your domain's A record at the VPS, then
+#   sudo cp Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+# Caddy gets the TLS cert automatically; the RN app's apiBase = https://<domain>
+vericam.example.com {
+	encode gzip
+	reverse_proxy localhost:8787
+}
