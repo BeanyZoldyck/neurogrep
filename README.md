@@ -20,3 +20,11 @@ Hardware utilities and firmware that happen to live in one repo.
   forwarded packet rate.
 
 Credentials live in a gitignored `secrets.h`; see the firmware README.
+
+## Public video check
+
+A shared clip is a `vericam-rgba-v1` evidence file: 25 raw 160×120 RGBA frames and the SHA-256 chain from [`mobile/core.mjs`](mobile/core.mjs). The server publishes that JSON to the public bucket and stores the recomputed proof in Tiger Data. Anyone can recompute it from the object URL with no AWS credentials:
+
+`https://neurogrep-public-1794752476.s3.amazonaws.com/<key>`
+
+The bucket allows anonymous `s3:GetObject` only. Listing is not public. Setup, the upload and sweep commands, and `npm run demo:share` are in [`server/README.md`](server/README.md).

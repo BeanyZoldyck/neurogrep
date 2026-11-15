@@ -21,16 +21,17 @@ export function parseState(value) {
   if (b.length !== 54 || b[0] !== 1) throw Error('Unsupported firmware protocol');
   return {status:b[1], mode:b[3], session:hex(b.slice(4,8)), elapsed:new DataView(b.buffer,b.byteOffset,b.byteLength).getUint32(8,true), uid:hex(b.slice(12,12+b[2])), bytes:b.slice(22,54)};
 }
+export function frameBytes(encoded) {
+  if (typeof encoded !== 'string' || encoded.length !== WIDTH*HEIGHT*4*4/3) throw Error('Invalid frame size');
+  const frame = Uint8Array.from(atob(encoded), c=>c.charCodeAt(0));
+  if (frame.length !== WIDTH*HEIGHT*4) throw Error('Invalid frame');
+  return frame;
+}
 export async function verifyEvidence(e) {
   if (e?.format !== 'vericam-rgba-v1' || e.width !== WIDTH || e.height !== HEIGHT || !Array.isArray(e.frames) || e.frames.length !== COUNT) throw Error('Invalid evidence format');
   const uid = unhex(e.uid), seed = unhex(e.seed);
   if (![4,7,10].includes(uid.length) || seed.length !== 32) throw Error('Invalid card metadata');
   let hash = await initial(uid, seed);
-  for (let i=0;i<COUNT;i++) {
-    if (typeof e.frames[i] !== 'string' || e.frames[i].length !== WIDTH*HEIGHT*4*4/3) throw Error('Invalid frame size');
-    const frame = Uint8Array.from(atob(e.frames[i]), c=>c.charCodeAt(0));
-    if (frame.length !== WIDTH*HEIGHT*4) throw Error('Invalid frame');
-    hash = await step(hash, frame, i);
-  }
+  for (let i=0;i<COUNT;i++) hash = await step(hash, frameBytes(e.frames[i]), i);
   return hash;
 }
