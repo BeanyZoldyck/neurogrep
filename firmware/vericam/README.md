@@ -2,7 +2,10 @@
 
 Implements the phone-camera / BLE / S50 commitment flow from `NEWPLAN.md`.
 Target: classic ESP32 AI-Thinker ESP32-CAM, not ESP32-C3. The phone captures
-the images; the ESP32's camera is not initialized. No Wi-Fi credentials needed.
+the images; the ESP32's camera is not initialized. Wi-Fi credentials live in
+gitignored `include/secrets.h` (copy `secrets.h.example` when building elsewhere).
+See [React/backend integration](integration/README.md) for outbound signed HTTPS
+events, Vultr reverse proxy and Tiger Data contracts.
 
 ## RC522 wiring (confirm board model first)
 
