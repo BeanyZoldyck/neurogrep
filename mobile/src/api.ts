@@ -27,7 +27,6 @@ export const postClip = (c: { label: string; uid: string; seed: string; digest: 
 export function postEvent(e: { kind: 'capture' | 'burn' | 'verify' | 'fail'; uid: string; ms: number; result: 'pass' | 'fail' | null; detail: string }) {
   void call('POST', '/api/events', e, 5000);
 }
-export const getStats = () => call<unknown>('GET', '/api/events/stats');
 export const explain = (b: { result: 'pass' | 'fail'; uidOk: boolean; hashOk: boolean; cardHex: string; chainHex: string; label: string }) =>
   call<{ text: string }>('POST', '/api/explain', b, 15000);
 export const twin = (b: { width: number; height: number; frames: string[] }) =>

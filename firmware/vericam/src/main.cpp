@@ -16,7 +16,7 @@ uint8_t state[54] = {1}, digest[32], received = 0;
 uint32_t started = 0, waiting = 0;
 bool active = false, scanning = false;
 volatile bool disconnected = false;
-constexpr uint32_t WINDOW = 1100;
+constexpr uint32_t WINDOW = 1500;
 
 void publish(uint8_t status) {
   state[1] = status;
@@ -28,6 +28,13 @@ void publish(uint8_t status) {
 void releaseCard() {
   rfid.PICC_HaltA(); rfid.PCD_StopCrypto1();
   active = scanning = false; received = 0;
+}
+// REQA ignores a halted card; WUPA re-selects one still held in the field, so
+// back-to-back chained capture segments don't need a lift-and-re-tap.
+static bool cardPresent() {
+  if (rfid.PICC_IsNewCardPresent()) return true;
+  byte atqa[2], size = sizeof(atqa);
+  return rfid.PICC_WakeupA(atqa, &size) == MFRC522::STATUS_OK;
 }
 void fail(uint8_t code) { publish(code); releaseCard(); }
 bool readBlocks(uint8_t *out) {
@@ -106,7 +113,7 @@ void loop() {
       }
     }
   }
-  if (scanning && rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+  if (scanning && cardPresent() && rfid.PICC_ReadCardSerial()) {
     scanning = false; started = millis(); active = true;
     if (rfid.PICC_GetType(rfid.uid.sak) != MFRC522::PICC_TYPE_MIFARE_1K) { fail(0x81); return; }
     state[2] = rfid.uid.size; memcpy(state + 12, rfid.uid.uidByte, rfid.uid.size);

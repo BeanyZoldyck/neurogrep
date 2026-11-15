@@ -23,6 +23,6 @@ npx expo run:android   # or: npx expo run:ios
   not canvas RGBA, so mobile clips verify against mobile-recomputed chains, not web ones.
 - Clips persist in `documentDirectory/clips/clip{A,B}.vcam` (web `.vcam` layout + per-frame sizes and
   `pixelFormat` in the header); thumbnails are `takeSnapshot()` JPEGs. Virtual card: `vcam-card.json`.
-- Twin = deterministic ±1 LSB re-quantization of A's frames ("local resynthesis"); the API button
+- Twin = deterministic visible resynthesis of A's frames (banding, grain, smear); the API button
   additionally sends A's thumbnail JPEG to `/api/twin` for the displayed thumbnail.
 - API base: `app.json` → `extra.apiBase`, editable on the Link tab. All backend calls fail soft.

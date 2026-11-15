@@ -16,8 +16,8 @@ export const CAM_CMD = 'f3641401-00b0-4240-ba50-05ca45bf8abc';
 export const CAM_STATE = 'f3641402-00b0-4240-ba50-05ca45bf8abc';
 export const CAM_ERRORS: Record<number, string> = {
   0x80: 'RC522 not detected (check wiring)', 0x81: 'not a MIFARE Classic 1K card', 0x82: 'card auth/read failed',
-  0x83: '1,100 ms deadline exceeded', 0x84: 'no card within 15 s (lift and re-tap)', 0x85: 'digest packet order invalid',
-  0x86: 'card write/readback failed', 0x87: 'card written but outside 1,100 ms window',
+  0x83: '1,500 ms deadline exceeded', 0x84: 'no card within 15 s (lift and re-tap)', 0x85: 'digest packet order invalid',
+  0x86: 'card write/readback failed', 0x87: 'card written but outside 1,500 ms window',
 };
 export const FAIL_REASONS: Record<number, string> = {
   1: 'deadline missed (RF window closed)', 2: 'card auth/read failed', 3: 'card write failed',
@@ -132,7 +132,7 @@ export class BleHsm implements Hsm {
         if (st.status === 1 && !armed) { armed = true; emit({ type: 'armed', mode }); }
         if (!afterDigest && (st.status === 2 || st.status === 4)) {
           this.t0 = Date.now();
-          emit({ type: 'card', mode: st.status === 2 ? 1 : 2, uid: st.uid, data: st.data, windowMs: 1100 });
+          emit({ type: 'card', mode: st.status === 2 ? 1 : 2, uid: st.uid, data: st.data, windowMs: 1500 });
           return; // stop polling: keep the radio free while the phone captures
         }
         if (st.status === 3) { emit({ type: 'ok', tDigest: this.tDigest, tTotal: st.elapsed }); return; }
@@ -170,7 +170,7 @@ export class BleHsm implements Hsm {
 // ---------- Mock (virtual S50 persisted in documentDirectory/vcam-card.json) ----------
 type Card = { uid: number[]; data: number[] };
 export class MockHsm implements Hsm {
-  mode = 0; window = 1100; waiting = false; t0 = 0;
+  mode = 0; window = 1500; waiting = false; t0 = 0;
   to: ReturnType<typeof setTimeout> | null = null;
   file = new File(Paths.document, 'vcam-card.json');
   card: Card;

@@ -28,7 +28,7 @@
 #define PIN_MISO 5
 #define PIN_RST  3
 
-#define WINDOW_MS 1100   // active RF session window for the digest burn
+#define WINDOW_MS 1500   // active RF session window for the digest burn
 #define BLK_A 4
 #define BLK_B 5
 #define BLK_TRAILER 7
@@ -97,6 +97,14 @@ static void endCard() {
   rfid.PCD_StopCrypto1();
 }
 
+// REQA ignores a halted card; WUPA re-selects one still held in the field, so
+// back-to-back chained capture segments don't need a lift-and-re-tap.
+static bool cardPresent() {
+  if (rfid.PICC_IsNewCardPresent()) return true;
+  byte atqa[2], size = sizeof(atqa);
+  return rfid.PICC_WakeupA(atqa, &size) == MFRC522::STATUS_OK;
+}
+
 static bool authSector1() {
   return rfid.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, BLK_TRAILER, &keyA,
                                &rfid.uid) == MFRC522::STATUS_OK;
@@ -146,7 +154,7 @@ void setup() {
 void loop() {
   uint8_t mode = armed;
   if (mode == MODE_IDLE) { delay(5); return; }
-  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) { delay(2); return; }
+  if (!cardPresent() || !rfid.PICC_ReadCardSerial()) { delay(2); return; }
 
   uint32_t t0 = millis();
   uint8_t data[32];

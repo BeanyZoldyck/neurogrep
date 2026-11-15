@@ -2,12 +2,13 @@
 //   u32le(hdrLen) || JSON header || frame_0 || ... || frame_{n-1}
 import { Directory, File, Paths } from 'expo-file-system';
 import { Buffer } from 'buffer';
-import { hex, unhex, u32 } from './chain';
+import { Segment, hex, unhex, u32 } from './chain';
 
 export type Clip = {
   label: string; uid: Uint8Array; seed: Uint8Array; digest: Uint8Array | null;
   w: number; h: number; pixelFormat: string; frames: Uint8Array[]; timeline: string[];
   thumb: string | null; // file:// URI of JPEG snapshot
+  segments: Segment[];  // chained ≤1.5 s capture segments; frames is their concatenation
 };
 
 const dir = () => { const d = new Directory(Paths.document, 'clips'); if (!d.exists) d.create({ idempotent: true }); return d; };
@@ -18,6 +19,7 @@ export function saveClip(k: string, c: Clip) {
       label: c.label, uid: hex(c.uid), seed: hex(c.seed), digest: c.digest ? hex(c.digest) : null,
       w: c.w, h: c.h, pixelFormat: c.pixelFormat, n: c.frames.length, sizes: c.frames.map((f) => f.length),
       timeline: c.timeline, thumb: c.thumb,
+      segments: c.segments.map((g) => ({ seed: hex(g.seed), digest: hex(g.digest), n: g.n })),
     }), 'utf8');
     const total = 4 + hdr.length + c.frames.reduce((s, f) => s + f.length, 0);
     const out = new Uint8Array(total); out.set(u32(hdr.length), 0); out.set(hdr, 4);
@@ -34,7 +36,11 @@ export function loadClip(k: string): Clip | null {
     const m = JSON.parse(Buffer.from(b.subarray(4, 4 + n)).toString('utf8'));
     const frames: Uint8Array[] = []; let o = 4 + n;
     for (const sz of m.sizes as number[]) { frames.push(b.slice(o, o + sz)); o += sz; }
-    return { label: m.label, uid: unhex(m.uid), seed: unhex(m.seed), digest: m.digest ? unhex(m.digest) : null,
+    const seed = unhex(m.seed), digest = m.digest ? unhex(m.digest) : null;
+    const segments: Segment[] = m.segments
+      ? m.segments.map((g: any) => ({ seed: unhex(g.seed), digest: unhex(g.digest), n: g.n }))
+      : [{ seed, digest: digest ?? new Uint8Array(32), n: frames.length }]; // pre-segment single clip
+    return { segments, label: m.label, uid: unhex(m.uid), seed: unhex(m.seed), digest: m.digest ? unhex(m.digest) : null,
       w: m.w, h: m.h, pixelFormat: m.pixelFormat, frames, timeline: m.timeline || [], thumb: m.thumb };
   } catch (e) { console.warn('loadClip', e); return null; }
 }
