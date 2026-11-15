@@ -9,7 +9,7 @@ export async function init() {
   const url = process.env.TIGER_DATABASE_URL;
   if (!url) return console.log('[tiger] TIGER_DATABASE_URL not set; using in-memory events');
   try {
-    pool = new pg.Pool({ connectionString: url, max: 5, ssl: /sslmode=disable/.test(url) ? false : { rejectUnauthorized: false } });
+    pool = new pg.Pool({ connectionString: url.replace(/[?&]sslmode=[^&]*/, ""), max: 5, ssl: /sslmode=disable/.test(url) ? false : { rejectUnauthorized: false } });
     await pool.query(`CREATE TABLE IF NOT EXISTS vericam_events(
       time timestamptz NOT NULL DEFAULT now(), kind text, uid text, ms int, result text, detail text)`);
     try { await pool.query(`SELECT create_hypertable('vericam_events','time', if_not_exists => true)`); }
