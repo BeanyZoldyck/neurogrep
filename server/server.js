@@ -1,17 +1,21 @@
 import express from 'express';
 import cors from 'cors';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { dirname, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import * as mongo from './lib/mongo.js';
 import * as tiger from './lib/tiger.js';
 import * as solana from './lib/solana.js';
 import * as gemini from './lib/gemini.js';
+import { mountShareRoutes } from './lib/share-http.js';
+import { openShareFromEnv, scheduleSweep } from './lib/runtime.js';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '60mb' }));
+
+const ctx = { share: null, store: null, proofs: null };
 
 const HEX = /^[0-9a-fA-F]*$/;
 const isHex = (s, len) => typeof s === 'string' && HEX.test(s) && (len ? s.length === len : s.length > 0);
@@ -20,7 +24,19 @@ const wrap = (fn) => (req, res) => fn(req, res).catch((e) => { console.error(e);
 
 app.get('/api/health', (_req, res) => res.json({
   ok: true,
-  integrations: { mongo: mongo.enabled(), tiger: tiger.enabled(), solana: solana.enabled(), gemini: gemini.enabled() },
+  integrations: {
+    mongo: mongo.enabled(),
+    tiger: tiger.enabled(),
+    proofs: ctx.proofs?.kind || 'disabled',
+    s3: ctx.store ? {
+      bucket: ctx.store.bucket,
+      publicBaseUrl: ctx.store.publicBaseUrl,
+      write: !!ctx.store.canWrite,
+      list: !!ctx.store.canList,
+    } : null,
+    solana: solana.enabled(),
+    gemini: gemini.enabled(),
+  },
 }));
 
 app.post('/api/clips', wrap(async (req, res) => {
@@ -69,9 +85,30 @@ app.post('/api/twin', wrap(async (req, res) => {
 
 app.post('/api/explain', wrap(async (req, res) => res.json({ text: await gemini.explain(req.body || {}) })));
 
+mountShareRoutes(app, ctx);
 
 const PORT = +process.env.PORT || 8787;
-await Promise.all([mongo.init(), tiger.init()]);
-app.listen(PORT, () => console.log(`[vericam] listening on :${PORT}`, {
-  mongo: mongo.enabled(), tiger: tiger.enabled(), solana: solana.enabled(), gemini: gemini.enabled(),
-}));
+
+function isDirectRun() {
+  const arg = process.argv[1];
+  if (!arg) return false;
+  return import.meta.url === pathToFileURL(resolve(arg)).href;
+}
+
+async function start() {
+  await Promise.all([mongo.init(), tiger.init()]);
+  const opened = await openShareFromEnv();
+  ctx.share = opened.share;
+  ctx.store = opened.store;
+  ctx.proofs = opened.proofs;
+  if (opened.sweepIntervalMs) scheduleSweep(opened.share, opened.sweepIntervalMs);
+  app.listen(PORT, () => console.log(`[vericam] listening on :${PORT}`, {
+    mongo: mongo.enabled(), tiger: tiger.enabled(), proofs: ctx.proofs?.kind,
+    s3: ctx.store?.publicBaseUrl, s3Write: !!ctx.store?.canWrite,
+    solana: solana.enabled(), gemini: gemini.enabled(),
+  }));
+}
+
+if (isDirectRun()) await start();
+
+export { app, start };

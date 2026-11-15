@@ -21,7 +21,7 @@ No hardware? Use **Demo mode**: a virtual card held in local storage, with the s
 |---|---|
 | Best Use of Gemini API | `/api/twin` builds the UGC twin with a Gemini image model. `/api/explain` writes the judge-facing verdict. |
 | Best Use of Solana | Each burned digest is anchored on devnet through an SPL Memo tx (`vericam:v1:<uid>:<digest>`). |
-| Best Use of Tiger Data | Capture, burn and verify events go into a Timescale hypertable. `/api/events/stats` uses `time_bucket`. |
+| Best Use of Tiger Data | Capture, burn and verify events go into a Timescale hypertable. `/api/events/stats` uses `time_bucket`. Published clips also get a `vericam_proofs` row (digest, per-frame hashes, public S3 URL) that a later check corroborates. |
 | Best Use of Vultr | Vultr hosts the HTTPS API for the app (Caddy + systemd). |
 | Best Use of MongoDB Atlas | Clip registry (`vericam.clips`). |
 | DEV Writing Challenge | Draft in `DEV_POST.md`. |

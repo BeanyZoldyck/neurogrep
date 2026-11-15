@@ -3,13 +3,22 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
     "dev": "node --watch --env-file-if-exists=.env server.js",
-    "solana:keygen": "node scripts/solana-keygen.js"
+    "solana:keygen": "node scripts/solana-keygen.js",
+    "test": "node --test test/*.test.js",
+    "demo:share": "node scripts/demo-share.mjs",
+    "share:sample": "node scripts/share-sample.mjs",
+    "share:upload": "node --env-file-if-exists=.env scripts/share-upload.mjs",
+    "share:verify": "node --env-file-if-exists=.env scripts/share-verify.mjs",
+    "share:sweep": "node --env-file-if-exists=.env scripts/share-sweep.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1169.0",
     "@google/genai": "^1.0.0",
     "@solana/web3.js": "^1.98.0",
     "bs58": "^6.0.0",
@@ -17,5 +26,9 @@
     "express": "^4.21.2",
     "mongodb": "^6.12.0",
     "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "aws-sdk-client-mock": "^4.1.0",
+    "pg-mem": "^3.0.14"
   }
 }
