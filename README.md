@@ -1,4 +1,4 @@
-# neurogrep
+# provenance
 
 Hardware utilities and firmware that happen to live in one repo.
 
